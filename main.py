@@ -1,4 +1,4 @@
-from service.llm_service import LLMService
+from services.llm_service import LLMService
 
 def main():
     llm_service = LLMService()
