@@ -25,3 +25,15 @@ class LLMService:
         except Exception as e:
             print(f"An error occurred: {e}")
             return f"error {str(e)}"
+
+    def start_chat(self):
+        if self._client is None:
+            raise Exception("LLMService client is not initialized")
+        try:
+            self.chat = self._client.chats.create(
+                model=self._model,
+            )
+            return self.chat
+        except Exception as e:
+            print(f"An error occurred while starting chat: {e}")
+            return None
