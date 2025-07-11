@@ -8,10 +8,13 @@ def main():
         return
     while True:
         user_input = input("You: ")
-        if user_input.lower() in ["exit", "quit"]:
+        if user_input.lower() in ["exit", "quit", "thanks", "bye"]:
             print("Exiting chat.")
             break
-        response = chat.send_message(user_input)
+        response = chat.send_message(
+            message = user_input,
+            config = {"temperature": 0.5}
+        )
         print(f"LLM: {response.text}")
 
 if __name__ == "__main__":
