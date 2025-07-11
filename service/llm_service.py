@@ -3,6 +3,7 @@ from google import genai
 class LLMService:
     _instance = None
     _client = None
+    _model = "gemini-2.5-flash"
 
     def __new__(cls):
         if not cls._instance:
@@ -12,15 +13,15 @@ class LLMService:
     def __init__(self):
         self._client = genai.Client()
 
-    def generate_response(self, prompt):
+    def generate_response(self, prompt) -> str | None:
         if self._client is None:
             raise Exception("LLMService client is not initialized")
         try:
             response = self._client.models.generate_content(
-                model = "gemini-2.5-flash",
+                model = self._model,
                 contents = prompt,
             )
             return response.text
         except Exception as e:
             print(f"An error occurred: {e}")
-            return {"error": str(e)}
+            return f"error {str(e)}"
