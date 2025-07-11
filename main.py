@@ -11,8 +11,9 @@ def main():
         if user_input.lower() in ["exit", "quit", "thanks", "bye"]:
             print("Exiting chat.")
             break
+        prompt = f"Uses three sentences maximum to answer the question: {user_input}"
         response = chat.send_message(
-            message = user_input,
+            message = prompt,
             config = {"temperature": 0.5}
         )
         print(f"LLM: {response.text}")
