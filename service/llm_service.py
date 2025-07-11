@@ -1,15 +1,26 @@
-from ..models.llm_model import LLMModel
+from google import genai
 
 class LLMService:
-    def __init__(self, api_key):
-        self.model = LLMModel(api_key)
+    _instance = None
+    _client = None
+
+    def __new__(cls):
+        if not cls._instance:
+            cls._instance = super(LLMService, cls).__new__(cls)
+        return cls._instance
+    
+    def __init__(self):
+        self._client = genai.Client()
 
     def generate_response(self, prompt):
-        try:  
-            response = self.model.generate_response(prompt)
-            if response.status_code != 200:
-                raise Exception(f"Error generating response: {response.text}")
-            return response.json()
+        if self._client is None:
+            raise Exception("LLMService client is not initialized")
+        try:
+            response = self._client.models.generate_content(
+                model = "gemini-2.5-flash",
+                contents = prompt,
+            )
+            return response.text
         except Exception as e:
             print(f"An error occurred: {e}")
             return {"error": str(e)}
