@@ -1,9 +1,11 @@
 from google import genai
 
-class LLMService:
+from services.llms.llm_service import LLMService
+
+class LLMServiceImp(LLMService):
     _instance = None
     _client = None
-    _model = "gemini-2.5-flash"
+    model = "gemini-2.5-flash"
 
     def __new__(cls):
         if not cls._instance:
@@ -18,7 +20,7 @@ class LLMService:
             raise Exception("LLMService client is not initialized")
         try:
             response = self._client.models.generate_content(
-                model = self._model,
+                model = self.model,
                 contents = prompt,
             )
             return response.text
@@ -31,7 +33,7 @@ class LLMService:
             raise Exception("LLMService client is not initialized")
         try:
             self.chat = self._client.chats.create(
-                model=self._model,
+                model=self.model,
             )
             return self.chat
         except Exception as e:
