@@ -1,8 +1,21 @@
-from services.llms.llm_service_imp import LLMService, LLMServiceImp
+from dotenv import load_dotenv
+from services.llms.llm_service_imp import LLMServiceImp
+from services.rag.rag_notion_imp import RagNotionImp
 
 def main():
+    load_dotenv()
     llm_service = LLMServiceImp()
-    chat = llm_service.start_chat()
+    rag_service = RagNotionImp()
+    query = input("Enter your query: ")
+    documents = rag_service.retrieve_documents(query)
+    if not documents:
+        print("No relevant documents found.")
+        return
+
+    summary = rag_service.generate_summary(documents)
+    print(f"Summary of relevant documents: {summary}")
+
+    """chat = llm_service.start_chat()
     if chat is None:
         print("Failed to start chat.")
         return
@@ -16,7 +29,7 @@ def main():
             message = prompt,
             config = {"temperature": 0.5}
         )
-        print(f"{llm_service.model}: {response.text}")
+        print(f"{llm_service.model}: {response.text}")"""
 
 if __name__ == "__main__":
     main()
