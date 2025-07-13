@@ -1,6 +1,10 @@
 import os
+from typing import List
 from services.rag.rag_service import RAGService
 from langchain.document_loaders import NotionDBLoader
+from langchain.vectorstores import Chroma
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.documents.base import Document
 
 class RagNotionImp(RAGService):
     _instance = None
@@ -25,6 +29,30 @@ class RagNotionImp(RAGService):
             database_id = database_id
         )
         self.docs = _loader.load()
+        print(f"Loaded {len(self.docs)} documents from Notion database.")
+        
+    def _splitter(self) -> List[Document]:
+        if self.docs is None:
+            raise Exception("RAGService loader is not initialized or failed to load documents.")
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size = 1000,
+            chunk_overlap = 200,
+            length_function = len
+        )
+        splits = text_splitter.split_documents(self.docs)
+        return splits
+
+    def retrieve_vector_store(self) -> Chroma:
+        splits = self._splitter()
+        if not splits:
+            raise Exception("Splits is not initialized")
+        self.vector_store = Chroma.from_documents(
+            documents = splits,
+            persist_directory = "vector_store"  # Ensure this directory exists or is created
+        )
+        self.vector_store.persist()
+        print("Vector store persisted.")
+        return self.vector_store
 
     def retrieve_documents(self, query: str) -> list[str]:
         if self.docs is None:
