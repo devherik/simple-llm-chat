@@ -1,5 +1,5 @@
 import os
-from rag_service import RAGService
+from services.rag.rag_service import RAGService
 from langchain.document_loaders import NotionDBLoader
 
 class RagNotionImp(RAGService):
