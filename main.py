@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 from services.llms.llm_service_imp import LLMServiceImp
-from services.rag.rag_notion_imp import RagNotionImp
+from services.rag.rag_notion import RagNotionImp
 
 def main():
     load_dotenv()

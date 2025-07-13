@@ -30,17 +30,6 @@ class RagNotionImp(RAGService):
         )
         self.docs = _loader.load()
         print(f"Loaded {len(self.docs)} documents from Notion database.")
-        
-    def _splitter(self) -> List[Document]:
-        if self.docs is None:
-            raise Exception("RAGService loader is not initialized or failed to load documents.")
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size = 1000,
-            chunk_overlap = 200,
-            length_function = len
-        )
-        splits = text_splitter.split_documents(self.docs)
-        return splits
 
     def retrieve_vector_store(self) -> Chroma:
         splits = self._splitter()
