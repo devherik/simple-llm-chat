@@ -1,21 +1,18 @@
 from dotenv import load_dotenv
+import os
 from services.llms.llm_service_imp import LLMServiceImp
-from services.rag.rag_notion import RagNotionImp
 
 def main():
     load_dotenv()
-    llm_service = LLMServiceImp()
-    rag_service = RagNotionImp()
-    query = input("Enter your query: ")
-    documents = rag_service.retrieve_documents(query)
-    if not documents:
-        print("No relevant documents found.")
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY environment variable is not set")
+    llm_service = LLMServiceImp(google_api_key=api_key)
+    if llm_service is None:
+        print("Failed to initialize LLM service.")
         return
 
-    summary = rag_service.generate_summary(documents)
-    print(f"Summary of relevant documents: {summary}")
-
-    """chat = llm_service.start_chat()
+    chat = llm_service.start_chat()
     if chat is None:
         print("Failed to start chat.")
         return
@@ -24,12 +21,13 @@ def main():
         if user_input.lower() in ["exit", "quit", "thanks", "bye"]:
             print("Exiting chat.")
             break
+        print("Thinking...")
         prompt = f"Uses three sentences maximum to answer this question: {user_input}"
-        response = chat.send_message(
-            message = prompt,
-            config = {"temperature": 0.5}
-        )
-        print(f"{llm_service.model}: {response.text}")"""
+        response = chat.run(prompt)
+        if response is None:
+            print("No response from the chat service.")
+            continue
+        print(f"{llm_service.model}: {response.text}")
 
 if __name__ == "__main__":
     main()

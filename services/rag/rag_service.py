@@ -3,11 +3,11 @@ from abc import ABC, abstractmethod
 class RAGService(ABC):
 
     @abstractmethod
-    def retrieve_documents(self, query: str) -> list[str]:
-        """Retrieve relevant documents based on the query."""
+    async def _load_data(self) -> None:
+        """Load data from the source."""
         pass
     
     @abstractmethod
-    def generate_summary(self, documents: list[str]) -> str:
-        """Generate a summary from the retrieved documents."""
+    async def _process_data(self) -> None:
+        """Process the loaded documents."""
         pass
