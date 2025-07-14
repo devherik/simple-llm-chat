@@ -23,7 +23,6 @@ class LLMServiceImp(LLMService):
                 model=cls.model,
                 convert_system_message_to_human=True
             )
-            cls._notion_rag = NotionRAGImp()
             cls._instance = super(LLMService, cls).__new__(cls)
             return cls._instance
         _secret_key = SecretStr(google_api_key)
@@ -32,7 +31,13 @@ class LLMServiceImp(LLMService):
             model=cls.model,
             convert_system_message_to_human=True
         )
-        cls._notion_rag = NotionRAGImp()
+        return cls._instance
+    
+    async def initialize_notion_rag(self):
+        """Initialize the Notion RAG component asynchronously."""
+        if self._notion_rag is None:
+            self._notion_rag = await NotionRAGImp.create()
+        return self._notion_rag
 
     def _embedding_data(self, data: List[Document]) -> None:
         if self._client is None:

@@ -13,9 +13,17 @@ class NotionRAGImp(RAGService):
     """
     docs: List[Document] = []
 
-    async def __init__(self):
-        await self._load_data()
-        await self._process_data()
+    def __init__(self):
+        # Initialize the instance without async operations
+        pass
+    
+    @classmethod
+    async def create(cls):
+        """Async factory method to create and initialize a NotionRAGImp instance."""
+        instance = cls()
+        await instance._load_data()
+        await instance._process_data()
+        return instance
 
     async def _load_data(self) -> None:
         # Logic to load data from the Notion database
