@@ -1,6 +1,6 @@
-import os
 from langchain_core.documents.base import Document
 from typing import List
+from helpers.cleaner import clean_metadata
 from services.llms.llm_service import LLMService
 from services.rag.notion_rag_imp import NotionRAGImp
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
@@ -37,47 +37,17 @@ class LLMServiceImp(LLMService):
         )
         return cls._instance
     
-    async def initialize_notion_rag(self):
+    async def initialize_rag(self):
         """Initialize the Notion RAG component asynchronously."""
         if self._notion_rag is None:
             self._notion_rag = await NotionRAGImp.create()
             self._embedding_data(self._notion_rag.docs)
         return self._notion_rag
 
-    def _clean_metadata(self, documents: List[Document]) -> List[Document]:
-        """Clean metadata to ensure compatibility with Chroma vector store."""
-        cleaned_docs = []
-        for doc in documents:
-            cleaned_metadata = {}
-            if doc.metadata:
-                for key, value in doc.metadata.items():
-                    # Convert complex objects to strings or skip them
-                    if isinstance(value, (str, int, float, bool)) or value is None:
-                        cleaned_metadata[key] = value
-                    elif isinstance(value, dict):
-                        # Flatten dictionary or convert to string
-                        for sub_key, sub_value in value.items():
-                            if isinstance(sub_value, (str, int, float, bool)) or sub_value is None:
-                                cleaned_metadata[f"{key}_{sub_key}"] = sub_value
-                            else:
-                                cleaned_metadata[f"{key}_{sub_key}"] = str(sub_value)
-                    elif isinstance(value, list):
-                        # Convert list to comma-separated string
-                        cleaned_metadata[key] = ", ".join(str(item) for item in value)
-                    else:
-                        # Convert other types to string
-                        cleaned_metadata[key] = str(value)
-            
-            cleaned_docs.append(Document(
-                page_content=doc.page_content,
-                metadata=cleaned_metadata
-            ))
-        return cleaned_docs
-
     def _embedding_data(self, data: List[Document]) -> None:
         try:
             # Clean metadata before embedding
-            cleaned_data = self._clean_metadata(data)
+            cleaned_data = clean_metadata(data)
             
             embeddings = GoogleGenerativeAIEmbeddings(
                 model="models/embedding-001",

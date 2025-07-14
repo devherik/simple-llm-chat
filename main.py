@@ -15,7 +15,7 @@ async def main():
         return
 
     # Initialize the Notion RAG component
-    await llm_service.initialize_notion_rag()
+    await llm_service.initialize_rag()
     
     chat = llm_service.start_chat()
     if chat is None:
@@ -28,15 +28,16 @@ async def main():
             print("Exiting chat.")
             break
         print("Thinking...")
-        response = chat({"query": user_input})
+        prompt = f"You are the 'Oracle' of our company; your goal is to help the employees. Answer the following question in three sentences maximum: {user_input}"
+        response = chat({"query": prompt})
         if response is None:
             print("No response from the chat service.")
             continue
         answer = response["result"]
         source_documents = response["source_documents"]
-        for doc in source_documents:
-            print(f"Document: {doc.page_content}")
-            print(f"Source: {doc.metadata}")
+        # for doc in source_documents:
+        #     print(f"Document: {doc.page_content}")
+        #     print(f"Source: {doc.metadata}")
         print(f"{llm_service.model}: {answer}")
 
 if __name__ == "__main__":
