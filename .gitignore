@@ -4,3 +4,4 @@
 services/__pycache__
 services/llms/__pycache__
 my-venv
+/chroma_db

@@ -8,7 +8,7 @@ from services.rag.rag_service import RAGService
 
 class NotionRAGImp(RAGService):
     """Class to handle data operations for Notion vector storage.
-    This class is responsible for loading, processing, and saving data from Notion.
+    This class is responsible for loading, and processing data from Notion.
     It also provides methods to retrieve and summarize documents.
     """
     docs: List[Document] = []

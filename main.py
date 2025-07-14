@@ -28,12 +28,16 @@ async def main():
             print("Exiting chat.")
             break
         print("Thinking...")
-        prompt = f"Uses three sentences maximum to answer this question: {user_input}"
-        response = chat.run(prompt)
+        response = chat({"query": user_input})
         if response is None:
             print("No response from the chat service.")
             continue
-        print(f"{llm_service.model}: {response.text}")
+        answer = response["result"]
+        source_documents = response["source_documents"]
+        for doc in source_documents:
+            print(f"Document: {doc.page_content}")
+            print(f"Source: {doc.metadata}")
+        print(f"{llm_service.model}: {answer}")
 
 if __name__ == "__main__":
     asyncio.run(main())
