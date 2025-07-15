@@ -41,6 +41,11 @@ class LLMServiceImp:
             raise ValueError("Agent has not been initialized.")
         
         try:
-            self._agent.print_response(query, stream=True)
+            self._agent.print_response(
+                query,
+                stream=True,
+                show_full_reasoning=True,
+                show_tool_calls=True
+            )
         except Exception as e:
             raise ValueError(f"Failed to get response from agent: {e}")
