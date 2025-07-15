@@ -53,4 +53,11 @@ def read_root():
 async def send_message(message: str):
     if not message:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
-    return {"Message received": message}
+    try:
+        response = await LLMServiceImp().get_answer(message)
+        print(f"Response from agent: {response}")
+        if not response:
+            raise HTTPException(status_code=500, detail="No response from the agent")
+        return {"response": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing message: {str(e)}")
