@@ -5,7 +5,7 @@ from agno.document.chunking.fixed import FixedSizeChunking
 from agno.document.base import Document as AgnoDocument
 from agno.embedder.google import GeminiEmbedder
 from typing import Optional
-from langchain.document_loaders import NotionDBLoader
+from langchain_community.document_loaders import NotionDBLoader
 from langchain_core.documents.base import Document
 
 from helpers.cleaner import clean_metadata
