@@ -1,8 +1,5 @@
-from services.llms.llm_service import LLMService
 from pydantic import SecretStr
-from langchain_core.documents.base import Document
-from typing import List
-from agno.agent import Agent, AgentKnowledge
+from agno.agent import Agent
 from agno.models.google import Gemini
 from agno.memory.v2.memory import Memory
 from typing import Optional
@@ -14,7 +11,6 @@ class LLMServiceImp:
     _agent: Optional[Agent] = None
     _memory: Optional[Memory] = None
     _secret_key: Optional[SecretStr] = None
-    _knowledge_base: Optional[AgentKnowledge] = None
     model = "gemini-2.5-flash"
     
     
@@ -23,10 +19,9 @@ class LLMServiceImp:
             cls._instance = super().__new__(cls, *args, **kwargs)
         return cls._instance
 
-    async def initialize_agent(self, key: str) -> None:
+    async def initialize_agent(self, key: str, knowledge_base) -> None:
         """Initializes the agent with the provided knowledge base."""
         self._secret_key = SecretStr(key)
-        # self._knowledge_base = knowledge_base
         self._agent = Agent(
             model=Gemini(id=self.model),
             markdown=True,
@@ -35,8 +30,9 @@ class LLMServiceImp:
                 "Answer the following question in four sentences maximum.",
                 "If you don't know the answer, say 'I don't know. Try the company sector responsable.'"
             ],
-            # search_knowledge=True,
-            # knowledge=self._knowledge_base,
+            search_knowledge=True,
+            show_tool_calls=True,
+            knowledge=knowledge_base,
         )
     
     async def get_answer(self, query: str) -> None:
@@ -44,4 +40,7 @@ class LLMServiceImp:
         if self._agent is None:
             raise ValueError("Agent has not been initialized.")
         
-        self._agent.print_response(query, stream=True)
+        try:
+            self._agent.print_response(query, stream=True)
+        except Exception as e:
+            raise ValueError(f"Failed to get response from agent: {e}")

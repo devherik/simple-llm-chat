@@ -17,10 +17,14 @@ async def main():
     if llm_service is None:
         print("Failed to initialize LLM service.")
         return
+
+    if rag_service.knowledge_base is None:
+        print("Failed to initialize knowledge base.")
+        return
+
+    await llm_service.initialize_agent(api_key, rag_service.knowledge_base)
     
-    await llm_service.initialize_agent(api_key)
-    
-    input_query = "What is the company's mission statement?"
+    input_query = "Como eu cadastro um novo motorista?"
 
     await llm_service.get_answer(input_query)
 
