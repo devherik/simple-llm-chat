@@ -41,8 +41,7 @@ async def startup_event():
 
     await llm_service.initialize_agent(
         key=api_key,
-        knowledge_base=rag_service.knowledge_base,
-        user_id="1"
+        knowledge_base=rag_service.knowledge_base
     )
 
 @router.get("/")
@@ -54,8 +53,7 @@ async def send_message(message: str):
     if not message:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
     try:
-        response = await LLMServiceImp().get_answer(message)
-        print(f"Response from agent: {response}")
+        response = await LLMServiceImp().get_answer(message, user_id="1")
         if not response:
             raise HTTPException(status_code=500, detail="No response from the agent")
         return {"response": response}

@@ -12,7 +12,7 @@ class LLMServiceImp:
     _instance = None
     _agent: Optional[Agent] = None
     _secret_key: Optional[SecretStr] = None
-    model = "gemini-2.5-flash"
+    model = "gemini-2.0-flash"
     
     
     def __new__(cls, *args, **kwargs):
@@ -20,7 +20,7 @@ class LLMServiceImp:
             cls._instance = super().__new__(cls, *args, **kwargs)
         return cls._instance
 
-    async def initialize_agent(self, key: str, knowledge_base, user_id: str) -> None:
+    async def initialize_agent(self, key: str, knowledge_base) -> None:
         """Initializes the agent with the provided knowledge base."""
         self._secret_key = SecretStr(key)
         try:
@@ -40,12 +40,12 @@ class LLMServiceImp:
                 db=0,
             )
             self._agent = Agent(
-                user_id=user_id,
                 model=Gemini(id=self.model),
                 markdown=True,
                 description="You are the 'Oracle' of our company; your goal is to help the employees.",
                 instructions=[
                     "Answer the following question in four sentences maximum.",
+                    "Do not provide any information that is not in the knowledge base.",
                     "If you don't know the answer, say something like 'I don't have this information. Try the company sector responsable.'"
                 ],
                 storage=storage,
@@ -58,14 +58,14 @@ class LLMServiceImp:
             )
         except Exception as e:
             raise ValueError(f"Failed to initialize agent: {e}")
-    
-    async def get_answer(self, query: str) -> None:
+
+    async def get_answer(self, query: str, user_id: str) -> None:
         """Processes the query and returns the response from the agent."""
         if self._agent is None:
             raise ValueError("Agent has not been initialized.")
         
         try:
-            response = self._agent.run(query)
+            response = self._agent.run(query, user_id="1")
             # self._agent.print_response(
             #     query,
             #     stream=True,
