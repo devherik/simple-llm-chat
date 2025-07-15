@@ -28,9 +28,11 @@ async def main():
         user_id="1"
     )
 
-    input_query = "Como eu cadastro um novo motorista?"
-
-    await llm_service.get_answer(input_query)
+    input_query = input("Você: ")
+    
+    while input_query.lower() != "obrigado":
+        await llm_service.get_answer(input_query)
+        input_query = input("Você: ")
 
 if __name__ == "__main__":
     asyncio.run(main())

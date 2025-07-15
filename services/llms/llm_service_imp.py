@@ -26,7 +26,7 @@ class LLMServiceImp:
         try:
             memory = Memory(
                 db=RedisMemoryDb(
-                    prefix="agno_test",
+                    prefix="memory",
                     host="localhost",
                     port=6379,
                     db=0,
@@ -34,7 +34,7 @@ class LLMServiceImp:
                 model=Gemini(id=self.model)
             )
             storage = RedisStorage(
-                prefix="agno_test",
+                prefix="agents_sessions",
                 host="localhost",
                 port=6379,
                 db=0,
@@ -46,7 +46,7 @@ class LLMServiceImp:
                 description="You are the 'Oracle' of our company; your goal is to help the employees.",
                 instructions=[
                     "Answer the following question in four sentences maximum.",
-                    "If you don't know the answer, say 'I don't know. Try the company sector responsable.'"
+                    "If you don't know the answer, say something like 'I don't have this information. Try the company sector responsable.'"
                 ],
                 storage=storage,
                 memory=memory,
