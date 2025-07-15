@@ -22,8 +22,12 @@ async def main():
         print("Failed to initialize knowledge base.")
         return
 
-    await llm_service.initialize_agent(api_key, rag_service.knowledge_base)
-    
+    await llm_service.initialize_agent(
+        key=api_key,
+        knowledge_base=rag_service.knowledge_base,
+        user_id="1"
+    )
+
     input_query = "Como eu cadastro um novo motorista?"
 
     await llm_service.get_answer(input_query)
