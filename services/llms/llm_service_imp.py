@@ -1,79 +1,47 @@
+from services.llms.llm_service import LLMService
+from pydantic import SecretStr
 from langchain_core.documents.base import Document
 from typing import List
-from helpers.cleaner import clean_metadata
-from services.llms.llm_service import LLMService
-from services.rag.notion_rag_imp import NotionRAGImp
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
-from langchain.vectorstores import Chroma
-from langchain.chains import RetrievalQA
-from pydantic import SecretStr
+from agno.agent import Agent, AgentKnowledge
+from agno.models.google import Gemini
+from agno.memory.v2.memory import Memory
+from typing import Optional
 
 
-class LLMServiceImp(LLMService):
+class LLMServiceImp:
+    """Create a singleton class for LLMServiceImp that initializes the agent with a knowledge base."""
     _instance = None
-    _client = None
-    _notion_rag = None
-    _vector_store = None
-    _secret_key = None
+    _agent: Optional[Agent] = None
+    _memory: Optional[Memory] = None
+    _secret_key: Optional[SecretStr] = None
+    _knowledge_base: Optional[AgentKnowledge] = None
     model = "gemini-2.5-flash"
-
-    def __new__(cls, google_api_key: str, *args, **kwargs):
-        if not cls._instance:
-            cls._google_api_key = google_api_key # Store the key
-            cls._secret_key = SecretStr(google_api_key)
-            cls._client = ChatGoogleGenerativeAI(
-                api_key=cls._secret_key,
-                model=cls.model,
-                convert_system_message_to_human=True
-            )
-            cls._instance = super(LLMService, cls).__new__(cls)
-            return cls._instance
-        cls._google_api_key = google_api_key # Store the key
-        cls._secret_key = SecretStr(google_api_key)
-        cls._client = ChatGoogleGenerativeAI(
-            api_key=cls._secret_key,
-            model=cls.model,
-            convert_system_message_to_human=True
-        )
-        return cls._instance
     
-    async def initialize_rag(self):
-        """Initialize the Notion RAG component asynchronously."""
-        if self._notion_rag is None:
-            self._notion_rag = await NotionRAGImp.create()
-            self._embedding_data(self._notion_rag.docs)
-        return self._notion_rag
+    
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+        return cls._instance
 
-    def _embedding_data(self, data: List[Document]) -> None:
-        try:
-            # Clean metadata before embedding
-            cleaned_data = clean_metadata(data)
-            
-            embeddings = GoogleGenerativeAIEmbeddings(
-                model="models/embedding-001",
-                google_api_key=self._secret_key) # Pass the stored API key
-            self._vector_store = Chroma.from_documents(
-                documents=cleaned_data,
-                embedding=embeddings,
-                persist_directory="chroma_db"
-            )
-        except Exception as e:
-            print(f"An error occurred while embedding data: {e}")
-            raise e
-
-    def start_chat(self):
-        if self._client is None:
-            raise Exception("LLMService client is not initialized")
-        if self._vector_store is None:
-            raise Exception("Vector store is not initialized. Please embed data first.")
-        try:
-            self.chat = RetrievalQA.from_chain_type(
-                llm=self._client,
-                chain_type="stuff",
-                retriever=self._vector_store.as_retriever(),
-                return_source_documents=True
-            )
-            return self.chat
-        except Exception as e:
-            print(f"An error occurred while starting chat: {e}")
-            return None
+    async def initialize_agent(self, key: str) -> None:
+        """Initializes the agent with the provided knowledge base."""
+        self._secret_key = SecretStr(key)
+        # self._knowledge_base = knowledge_base
+        self._agent = Agent(
+            model=Gemini(id=self.model),
+            markdown=True,
+            description="You are the 'Oracle' of our company; your goal is to help the employees.",
+            instructions=[
+                "Answer the following question in four sentences maximum.",
+                "If you don't know the answer, say 'I don't know. Try the company sector responsable.'"
+            ],
+            # search_knowledge=True,
+            # knowledge=self._knowledge_base,
+        )
+    
+    async def get_answer(self, query: str) -> None:
+        """Processes the query and returns the response from the agent."""
+        if self._agent is None:
+            raise ValueError("Agent has not been initialized.")
+        
+        self._agent.print_response(query, stream=True)

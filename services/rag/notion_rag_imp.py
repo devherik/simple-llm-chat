@@ -11,21 +11,19 @@ class NotionRAGImp(RAGService):
     This class is responsible for loading, and processing data from Notion.
     It also provides methods to retrieve and summarize documents.
     """
+    _instance = None
     docs: List[Document] = []
-
-    def __init__(self):
-        # Initialize the instance without async operations
-        pass
     
-    @classmethod
-    async def create(cls):
-        """Async factory method to create and initialize a NotionRAGImp instance."""
-        instance = cls()
-        await instance._load_data()
-        await instance._process_data()
-        return instance
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
-    async def _load_data(self) -> None:
+    def __init__(self) -> None:
+        self._load_data()
+        self._process_data()
+
+    def _load_data(self) -> None:
         # Logic to load data from the Notion database
         token = os.getenv("NOTION_INTEGRATION_TOKEN")
         id = os.getenv("NOTION_DATABASE_ID")
@@ -38,7 +36,7 @@ class NotionRAGImp(RAGService):
         )
         self.docs = loader.load()
 
-    async def _process_data(self) -> None:
+    def _process_data(self) -> None:
         # Logic to process the loaded data
         splits = splitter.splitter_documents(self.docs)
         if not splits:
