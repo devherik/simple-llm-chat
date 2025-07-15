@@ -12,7 +12,7 @@ class LLMServiceImp:
     _instance = None
     _agent: Optional[Agent] = None
     _secret_key: Optional[SecretStr] = None
-    model = "gemini-2.0-flash"
+    model = "gemini-2.5-flash"
     
     
     def __new__(cls, *args, **kwargs):
@@ -44,9 +44,10 @@ class LLMServiceImp:
                 markdown=True,
                 description="You are the 'Oracle' of our company; your goal is to help the employees.",
                 instructions=[
-                    "Answer the following question in four sentences maximum.",
+                    "Provide 'links' to the knowledge base if available.",
                     "Do not provide any information that is not in the knowledge base.",
-                    "If you don't know the answer, say something like 'I don't have this information. Try the company sector responsable.'"
+                    "If you don't know the answer, say something like 'I don't have this information. Try the company sector responsable.'",
+                    "Always respond in Portuguese (PT-BR).",
                 ],
                 storage=storage,
                 memory=memory,
@@ -65,7 +66,7 @@ class LLMServiceImp:
             raise ValueError("Agent has not been initialized.")
         
         try:
-            response = self._agent.run(query, user_id="1")
+            response = self._agent.run(query, user_id=user_id)
             # self._agent.print_response(
             #     query,
             #     stream=True,
