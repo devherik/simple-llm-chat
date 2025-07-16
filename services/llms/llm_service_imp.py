@@ -1,9 +1,11 @@
+import os
 from pydantic import SecretStr
 from agno.agent import Agent
 from agno.models.google import Gemini
 from agno.memory.v2.db.redis import RedisMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.storage.redis import RedisStorage
+from agno.tools.telegram import TelegramTools
 from typing import Optional
 
 
@@ -23,6 +25,10 @@ class LLMServiceImp:
     async def initialize_agent(self, key: str, knowledge_base) -> None:
         """Initializes the agent with the provided knowledge base."""
         self._secret_key = SecretStr(key)
+        telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        if not telegram_token or not telegram_chat_id:
+            raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID environment variables must be set")
         try:
             memory = Memory(
                 db=RedisMemoryDb(
@@ -48,6 +54,8 @@ class LLMServiceImp:
                     "Do not provide any information that is not in the knowledge base.",
                     "If you don't know the answer, say something like 'I don't have this information. Try the company sector responsable.'",
                     "Always respond in Portuguese (PT-BR).",
+                    "Respond in a friendly and professional tone.",
+                    "Send the response to the user via Telegram.",
                 ],
                 storage=storage,
                 memory=memory,
@@ -56,6 +64,12 @@ class LLMServiceImp:
                 search_knowledge=True,
                 show_tool_calls=True,
                 knowledge=knowledge_base,
+                tools=[
+                    TelegramTools(
+                        token=telegram_token,
+                        chat_id=telegram_chat_id
+                    )
+                ]
             )
         except Exception as e:
             raise ValueError(f"Failed to initialize agent: {e}")
