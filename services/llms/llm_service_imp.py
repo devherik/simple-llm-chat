@@ -28,10 +28,6 @@ class LLMServiceImp:
     async def initialize_agent(self, key: str, knowledge_base) -> None:
         """Initializes the agent with the provided knowledge base."""
         self._secret_key = SecretStr(key)
-        telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
-        telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
-        if not telegram_token or not telegram_chat_id:
-            raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID environment variables must be set")
         try:
             memory = Memory(
                 db=RedisMemoryDb(
@@ -50,14 +46,17 @@ class LLMServiceImp:
             )
             self._agent = Agent(
                 model=Gemini(id=self.model),
-                markdown=True,
-                description="You are the 'Oracle' of our company; your goal is to help the employees.",
+                goal="Your goal is to help the employees.",
+                introduction="You are a helpful assistant. Your goal is to help the employees.",
+                description="The employee will ask for an assistance about something from the company",
                 instructions=[
                     "Provide 'links' to the knowledge base if available.",
                     "Do not provide any information that is not in the knowledge base.",
                     "If you don't know the answer, say something like 'I don't have this information. Try the company sector responsable.'",
                     "Always respond in Portuguese (PT-BR).",
                     "Respond in a friendly and professional tone.",
+                    "Use bullet points for lists.",
+                    "The answer will be returned to a Telegram bot, so parse accordingly.",
                 ],
                 storage=storage,
                 memory=memory,
