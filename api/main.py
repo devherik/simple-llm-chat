@@ -33,7 +33,7 @@ router = FastAPI(lifespan=lifespan)
 
 # Application startup logic
 async def startup_event(app: FastAPI):
-    print("Starting up the application...")
+    print("---> Starting up the application...")
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
         raise ValueError("GOOGLE_API_KEY environment variable is not set")
@@ -62,6 +62,7 @@ async def startup_event(app: FastAPI):
     # Set the webhook
     webhook_url = f"{api_url}/telegram-webhook/{telegram_token}"
     await ptb_app.bot.set_webhook(url=webhook_url)
+    print(f"---> NGROK URL set to: {api_key}")
 
 @router.middleware("http")
 async def add_process_time_header(request, call_next):
