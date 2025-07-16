@@ -101,6 +101,7 @@ pyreadline3==3.5.4
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
 python-multipart==0.0.20
+python-telegram-bot==22.2
 PyYAML==6.0.2
 redis==6.2.0
 referencing==0.36.2
