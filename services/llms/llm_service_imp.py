@@ -55,7 +55,7 @@ class LLMServiceImp:
                     "If you don't know the answer, say something like 'I don't have this information. Try the company sector responsable.'",
                     "Always respond in Portuguese (PT-BR).",
                     "Respond in a friendly and professional tone.",
-                    "Send the response to the user via Telegram.",
+                    # "Send the response to the user via Telegram.",
                 ],
                 storage=storage,
                 memory=memory,
@@ -64,12 +64,12 @@ class LLMServiceImp:
                 search_knowledge=True,
                 show_tool_calls=True,
                 knowledge=knowledge_base,
-                tools=[
-                    TelegramTools(
-                        token=telegram_token,
-                        chat_id=telegram_chat_id
-                    )
-                ]
+                # tools=[
+                #     TelegramTools(
+                #         token=telegram_token,
+                #         chat_id=telegram_chat_id
+                #     )
+                # ]
             )
         except Exception as e:
             raise ValueError(f"Failed to initialize agent: {e}")

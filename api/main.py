@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Request
 from services.llms.llm_service_imp import LLMServiceImp
 from services.rag.notion_rag_imp import NotionRAGImp
 from telegram import Update
@@ -21,9 +21,17 @@ api_url = os.getenv("API_URL")
 if not api_url:
     raise ValueError("API_URL environment variable must be set")
 
-# Initialize the Telegram bot application
-app = ApplicationBuilder().token(telegram_token).build()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup event
+    await startup_event(app)
+    yield
+    # Cleanup can be added here if needed
+    # Shutdown event can be added here if needed
+    
+router = FastAPI(lifespan=lifespan)
 
+# Telegram bot handlers
 async def start_telegram_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.effective_user:
         print("Update message is None, cannot send reply.")
@@ -31,11 +39,17 @@ async def start_telegram_bot(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_html(f"Hello {update.effective_user.first_name}! How can I assist you today?")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message or not update.message.text:
+        print("Update message or text is None, cannot process message.")
+        return
+    print(f"Received message HERE: {update}")
     if update.message and update.message.text:
         message = update.message.text
         chat_id = str(update.message.chat_id)
         try:
-            response = await LLMServiceImp().get_answer(message, user_id=chat_id)
+            llm_service: LLMServiceImp = context.bot_data['llm_service']
+            response = await llm_service.get_answer(query=message, user_id=chat_id)
+            print(f"Response from agent: {response}")
             if not response:
                 await update.message.reply_text("No response from the agent.")
             else:
@@ -45,45 +59,41 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         print("Update message or text is None, cannot process message.")
 
-app.add_handler(CommandHandler("start", start_telegram_bot))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-
-# Initialize the FastAPI application
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup event
-    await startup_event()
-    yield
-    # Cleanup can be added here if needed
-    # Shutdown event can be added here if needed
-    
-router = FastAPI(lifespan=lifespan)
-
-async def startup_event():
+# Application startup logic
+async def startup_event(app: FastAPI):
     print("Starting up the application...")
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
         raise ValueError("GOOGLE_API_KEY environment variable is not set")
 
+    # Initialize services
     rag_service = NotionRAGImp()
     llm_service = LLMServiceImp()
-    if llm_service is None:
-        print("Failed to initialize LLM service.")
-        return
-
-    if rag_service.knowledge_base is None:
-        print("Failed to initialize knowledge base.")
-        return
-
-    await app.bot.set_webhook(url=f"{api_url}/telegram-webhook/{telegram_token}")
+    if llm_service is None or rag_service.knowledge_base is None:
+        raise RuntimeError("Failed to initialize services or knowledge base.")
 
     await llm_service.initialize_agent(
         key=api_key,
         knowledge_base=rag_service.knowledge_base
     )
+
+    # Initialize and configure the Telegram bot application
+    telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not telegram_token:
+        raise ValueError("TELEGRAM_BOT_TOKEN environment variable must be set")
+    ptb_app = ApplicationBuilder().token(telegram_token).build()
+    ptb_app.add_handler(CommandHandler("start", start_telegram_bot))
+    ptb_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
+    # Store services and the ptb_app instance in bot_data and app.state
+    ptb_app.bot_data['llm_service'] = llm_service
+    app.state.ptb_app = ptb_app
+
+    # Set the webhook
+    webhook_url = f"{api_url}/telegram-webhook/{telegram_token}"
+    await ptb_app.bot.set_webhook(url=webhook_url)
+    print(f"Webhook URL set to: {webhook_url}")
+
 @router.middleware("http")
 async def add_process_time_header(request, call_next):
     response = await call_next(request)
@@ -95,14 +105,29 @@ async def root():
     return {"message": "Agno LLM API is running"}
 
 @router.post(f"/telegram-webhook/{telegram_token}")
-async def send_message(message: str):
-    if not message:
-        raise HTTPException(status_code=400, detail="Message cannot be empty")
+async def send_message(request: Request):
+    print(f"Received message: {request}")
     try:
-        response = await LLMServiceImp().get_answer(message, user_id="1")
-        if not response:
-            raise HTTPException(status_code=500, detail="No response from the agent")
-        return {"response": response}
+        ptb_app = request.app.state.ptb_app
+        update_json = await request.json()
+        update = Update.de_json(update_json, ptb_app.bot)
+        print(f"Update received: {update}")
+        # await ptb_app.process_update(update)
+        if update.message and update.message.text:
+            message = update.message.text
+            chat_id = str(update.message.chat_id)
+            try:
+                llm_service: LLMServiceImp = ptb_app.bot_data['llm_service']
+                response = await llm_service.get_answer(query=message, user_id=chat_id)
+                print(f"Response from agent: {response}")
+                if not response:
+                    await update.message.reply_text("No response from the agent.")
+                else:
+                    await update.message.reply_text(response)
+            except Exception as e:
+                await update.message.reply_text(f"Error processing message: {str(e)}")
+        else:
+            print("Update message or text is None, cannot process message.")
+        return {"status": "success", "message": "Message processed successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing message: {str(e)}")
-    
