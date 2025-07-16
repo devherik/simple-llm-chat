@@ -43,6 +43,12 @@ async def startup_event():
         key=api_key,
         knowledge_base=rag_service.knowledge_base
     )
+    
+@router.middleware("http")
+async def add_process_time_header(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Process-Time"] = "0ms"
+    return response
 
 @router.get("/")
 def read_root():

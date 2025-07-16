@@ -6,3 +6,5 @@ services/llms/__pycache__
 my-venv
 /chroma_db
 /api/chroma_db
+/services/llms/__pycache__
+api/__pycache__/main.cpython-313.pyc
