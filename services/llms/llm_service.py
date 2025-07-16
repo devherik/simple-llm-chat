@@ -3,15 +3,8 @@ from langchain_core.documents.base import Document
 from typing import List
 
 class LLMService(ABC):
+    '''Abstract base class for LLM services.'''
     
     @abstractmethod
-    async def initialize_rag(self):
-        pass
-
-    @abstractmethod
-    def _embedding_data(self, data: List[Document]) -> None:
-        pass
-    
-    @abstractmethod
-    def start_chat(self):
+    async def __new__(cls, *args, **kwargs):
         pass

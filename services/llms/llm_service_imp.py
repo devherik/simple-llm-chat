@@ -1,79 +1,102 @@
-from langchain_core.documents.base import Document
-from typing import List
-from helpers.cleaner import clean_metadata
-from services.llms.llm_service import LLMService
-from services.rag.notion_rag_imp import NotionRAGImp
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
-from langchain.vectorstores import Chroma
-from langchain.chains import RetrievalQA
+import os
 from pydantic import SecretStr
+from agno.agent import Agent
+from agno.models.google import Gemini
+from agno.memory.v2.db.redis import RedisMemoryDb
+from agno.memory.v2.memory import Memory
+from agno.storage.redis import RedisStorage
+from agno.tools.telegram import TelegramTools
+from typing import Optional, Sequence
+
+from telegram import Audio
+from agno.media import Audio as AgnoAudio
 
 
-class LLMServiceImp(LLMService):
+class LLMServiceImp:
+    """Create a singleton class for LLMServiceImp that initializes the agent with a knowledge base."""
     _instance = None
-    _client = None
-    _notion_rag = None
-    _vector_store = None
-    _secret_key = None
+    _agent: Optional[Agent] = None
+    _secret_key: Optional[SecretStr] = None
     model = "gemini-2.5-flash"
-
-    def __new__(cls, google_api_key: str, *args, **kwargs):
-        if not cls._instance:
-            cls._google_api_key = google_api_key # Store the key
-            cls._secret_key = SecretStr(google_api_key)
-            cls._client = ChatGoogleGenerativeAI(
-                api_key=cls._secret_key,
-                model=cls.model,
-                convert_system_message_to_human=True
-            )
-            cls._instance = super(LLMService, cls).__new__(cls)
-            return cls._instance
-        cls._google_api_key = google_api_key # Store the key
-        cls._secret_key = SecretStr(google_api_key)
-        cls._client = ChatGoogleGenerativeAI(
-            api_key=cls._secret_key,
-            model=cls.model,
-            convert_system_message_to_human=True
-        )
-        return cls._instance
     
-    async def initialize_rag(self):
-        """Initialize the Notion RAG component asynchronously."""
-        if self._notion_rag is None:
-            self._notion_rag = await NotionRAGImp.create()
-            self._embedding_data(self._notion_rag.docs)
-        return self._notion_rag
+    
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+        return cls._instance
 
-    def _embedding_data(self, data: List[Document]) -> None:
+    async def initialize_agent(self, key: str, knowledge_base) -> None:
+        """Initializes the agent with the provided knowledge base."""
+        self._secret_key = SecretStr(key)
+        telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        if not telegram_token or not telegram_chat_id:
+            raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID environment variables must be set")
         try:
-            # Clean metadata before embedding
-            cleaned_data = clean_metadata(data)
-            
-            embeddings = GoogleGenerativeAIEmbeddings(
-                model="models/embedding-001",
-                google_api_key=self._secret_key) # Pass the stored API key
-            self._vector_store = Chroma.from_documents(
-                documents=cleaned_data,
-                embedding=embeddings,
-                persist_directory="chroma_db"
+            memory = Memory(
+                db=RedisMemoryDb(
+                    prefix="memory",
+                    host="localhost",
+                    port=6379,
+                    db=0,
+                ),
+                model=Gemini(id=self.model)
+            )
+            storage = RedisStorage(
+                prefix="agents_sessions",
+                host="localhost",
+                port=6379,
+                db=0,
+            )
+            self._agent = Agent(
+                model=Gemini(id=self.model),
+                markdown=True,
+                description="You are the 'Oracle' of our company; your goal is to help the employees.",
+                instructions=[
+                    "Provide 'links' to the knowledge base if available.",
+                    "Do not provide any information that is not in the knowledge base.",
+                    "If you don't know the answer, say something like 'I don't have this information. Try the company sector responsable.'",
+                    "Always respond in Portuguese (PT-BR).",
+                    "Respond in a friendly and professional tone.",
+                ],
+                storage=storage,
+                memory=memory,
+                enable_agentic_memory=True,
+                add_history_to_messages=True,
+                search_knowledge=True,
+                show_tool_calls=True,
+                knowledge=knowledge_base,
             )
         except Exception as e:
-            print(f"An error occurred while embedding data: {e}")
-            raise e
+            raise ValueError(f"Failed to initialize agent: {e}")
 
-    def start_chat(self):
-        if self._client is None:
-            raise Exception("LLMService client is not initialized")
-        if self._vector_store is None:
-            raise Exception("Vector store is not initialized. Please embed data first.")
+    async def get_answer(self, query: str, user_id: str) -> None:
+        """Processes the query and returns the response from the agent."""
+        if self._agent is None:
+            raise ValueError("Agent has not been initialized.")
+        
         try:
-            self.chat = RetrievalQA.from_chain_type(
-                llm=self._client,
-                chain_type="stuff",
-                retriever=self._vector_store.as_retriever(),
-                return_source_documents=True
-            )
-            return self.chat
+            response = self._agent.run(query, user_id=user_id)
+            return response.content
         except Exception as e:
-            print(f"An error occurred while starting chat: {e}")
-            return None
+            raise ValueError(f"Failed to get response from agent: {e}")
+        
+    
+    async def get_answer_by_audio(self, audio: Sequence[Audio], user_id: str) -> None:
+        """Processes the audio input and returns the response from the agent."""
+        if self._agent is None:
+            raise ValueError("Agent has not been initialized.")
+        
+        try:
+            # Convert telegram.Audio to agno.media.Audio
+            agno_audios = [
+                AgnoAudio(
+                    content=audio
+                    # Add other fields as required by AgnoAudio
+                )
+                for a in audio
+            ]
+            response = self._agent.run(audio=agno_audios, user_id=user_id)
+            return response.content
+        except Exception as e:
+            raise ValueError(f"Failed to get response from agent by audio: {e}")
