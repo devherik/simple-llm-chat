@@ -62,7 +62,7 @@ async def startup_event(app: FastAPI):
     # Set the webhook
     webhook_url = f"{api_url}/telegram-webhook/{telegram_token}"
     await ptb_app.bot.set_webhook(url=webhook_url)
-    print(f"---> NGROK URL set to: {api_key}")
+    print(f"---> NGROK URL set to: {api_url}")
 
 @router.middleware("http")
 async def add_process_time_header(request, call_next):
