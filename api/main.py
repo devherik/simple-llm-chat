@@ -31,34 +31,6 @@ async def lifespan(app: FastAPI):
     
 router = FastAPI(lifespan=lifespan)
 
-# Telegram bot handlers
-async def start_telegram_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.message or not update.effective_user:
-        print("Update message is None, cannot send reply.")
-        return
-    await update.message.reply_html(f"Hello {update.effective_user.first_name}! How can I assist you today?")
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.message or not update.message.text:
-        print("Update message or text is None, cannot process message.")
-        return
-    print(f"Received message HERE: {update}")
-    if update.message and update.message.text:
-        message = update.message.text
-        chat_id = str(update.message.chat_id)
-        try:
-            llm_service: LLMServiceImp = context.bot_data['llm_service']
-            response = await llm_service.get_answer(query=message, user_id=chat_id)
-            print(f"Response from agent: {response}")
-            if not response:
-                await update.message.reply_text("No response from the agent.")
-            else:
-                await update.message.reply_text(response)
-        except Exception as e:
-            await update.message.reply_text(f"Error processing message: {str(e)}")
-    else:
-        print("Update message or text is None, cannot process message.")
-
 # Application startup logic
 async def startup_event(app: FastAPI):
     print("Starting up the application...")
@@ -82,8 +54,6 @@ async def startup_event(app: FastAPI):
     if not telegram_token:
         raise ValueError("TELEGRAM_BOT_TOKEN environment variable must be set")
     ptb_app = ApplicationBuilder().token(telegram_token).build()
-    ptb_app.add_handler(CommandHandler("start", start_telegram_bot))
-    ptb_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     # Store services and the ptb_app instance in bot_data and app.state
     ptb_app.bot_data['llm_service'] = llm_service
@@ -92,7 +62,6 @@ async def startup_event(app: FastAPI):
     # Set the webhook
     webhook_url = f"{api_url}/telegram-webhook/{telegram_token}"
     await ptb_app.bot.set_webhook(url=webhook_url)
-    print(f"Webhook URL set to: {webhook_url}")
 
 @router.middleware("http")
 async def add_process_time_header(request, call_next):
@@ -106,12 +75,10 @@ async def root():
 
 @router.post(f"/telegram-webhook/{telegram_token}")
 async def send_message(request: Request):
-    print(f"Received message: {request}")
     try:
         ptb_app = request.app.state.ptb_app
         update_json = await request.json()
         update = Update.de_json(update_json, ptb_app.bot)
-        print(f"Update received: {update}")
         # await ptb_app.process_update(update)
         if update.message and update.message.text:
             message = update.message.text
@@ -119,7 +86,6 @@ async def send_message(request: Request):
             try:
                 llm_service: LLMServiceImp = ptb_app.bot_data['llm_service']
                 response = await llm_service.get_answer(query=message, user_id=chat_id)
-                print(f"Response from agent: {response}")
                 if not response:
                     await update.message.reply_text("No response from the agent.")
                 else:
