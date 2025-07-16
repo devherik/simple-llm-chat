@@ -83,15 +83,12 @@ async def send_message(request: Request):
         if update.message and update.message.text:
             message = update.message.text
             chat_id = str(update.message.chat_id)
-            try:
-                llm_service: LLMServiceImp = ptb_app.bot_data['llm_service']
-                response = await llm_service.get_answer(query=message, user_id=chat_id)
-                if not response:
-                    await update.message.reply_text("No response from the agent.")
-                else:
-                    await update.message.reply_text(response)
-            except Exception as e:
-                await update.message.reply_text(f"Error processing message: {str(e)}")
+            llm_service: LLMServiceImp = ptb_app.bot_data['llm_service']
+            response = await llm_service.get_answer(query=message, user_id=chat_id)
+            if not response:
+                await update.message.reply_text("No response from the agent.")
+            else:
+                await update.message.reply_text(response)
         else:
             print("Update message or text is None, cannot process message.")
         return {"status": "success", "message": "Message processed successfully"}

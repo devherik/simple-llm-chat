@@ -6,7 +6,10 @@ from agno.memory.v2.db.redis import RedisMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.storage.redis import RedisStorage
 from agno.tools.telegram import TelegramTools
-from typing import Optional
+from typing import Optional, Sequence
+
+from telegram import Audio
+from agno.media import Audio as AgnoAudio
 
 
 class LLMServiceImp:
@@ -55,7 +58,6 @@ class LLMServiceImp:
                     "If you don't know the answer, say something like 'I don't have this information. Try the company sector responsable.'",
                     "Always respond in Portuguese (PT-BR).",
                     "Respond in a friendly and professional tone.",
-                    # "Send the response to the user via Telegram.",
                 ],
                 storage=storage,
                 memory=memory,
@@ -64,12 +66,6 @@ class LLMServiceImp:
                 search_knowledge=True,
                 show_tool_calls=True,
                 knowledge=knowledge_base,
-                # tools=[
-                #     TelegramTools(
-                #         token=telegram_token,
-                #         chat_id=telegram_chat_id
-                #     )
-                # ]
             )
         except Exception as e:
             raise ValueError(f"Failed to initialize agent: {e}")
@@ -81,12 +77,26 @@ class LLMServiceImp:
         
         try:
             response = self._agent.run(query, user_id=user_id)
-            # self._agent.print_response(
-            #     query,
-            #     stream=True,
-            #     show_full_reasoning=True,
-            #     show_tool_calls=True
-            # )
             return response.content
         except Exception as e:
             raise ValueError(f"Failed to get response from agent: {e}")
+        
+    
+    async def get_answer_by_audio(self, audio: Sequence[Audio], user_id: str) -> None:
+        """Processes the audio input and returns the response from the agent."""
+        if self._agent is None:
+            raise ValueError("Agent has not been initialized.")
+        
+        try:
+            # Convert telegram.Audio to agno.media.Audio
+            agno_audios = [
+                AgnoAudio(
+                    content=audio
+                    # Add other fields as required by AgnoAudio
+                )
+                for a in audio
+            ]
+            response = self._agent.run(audio=agno_audios, user_id=user_id)
+            return response.content
+        except Exception as e:
+            raise ValueError(f"Failed to get response from agent by audio: {e}")
